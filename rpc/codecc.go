@@ -37,7 +37,7 @@ func (c *GobCodec) Decode(data []byte) (*RpcData, error) {
 	buf := bytes.NewBuffer(data)
 	decoder := gob.NewDecoder(buf)
 	dst := &RpcData{}
-	if err := decoder.Decode(&data); err != nil {
+	if err := decoder.Decode(dst); err != nil {
 		return nil, err
 	}
 	return dst, nil

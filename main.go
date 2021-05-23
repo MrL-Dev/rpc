@@ -1,52 +1,41 @@
 package main
 
 import (
-	"encoding/binary"
-	"encoding/json"
+	"context"
 	"fmt"
+	"log"
+	"myrpc/helloworld"
 	"myrpc/rpc"
-	"net"
+	"time"
 )
 
 func main() {
-	fmt.Println("my rpc demo")
-	go runServer()
-	go runClient()
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	fmt.Println("my rpc demo test...")
+	go runHelloServer()
+	time.Sleep(time.Second)
+	go runHelloClient()
+
 	select {}
+
 }
 
-func runClient() {
-	var req = rpc.RpcData{
-		Name: "fn",
-		Args: []interface{}{1, "aaa"},
-	}
-	rpcCall(req)
+func runHelloServer() {
+	s := rpc.NewServer("tcp4", "127.0.0.1:3002")
+	s.Register(&helloworld.HelloWorldServer{})
+	s.Run()
 }
 
-func rpcCall(data rpc.RpcData) {
-	conn, err := net.Dial("tcp4", "127.0.0.1:3001")
+func runHelloClient() {
+	cli, err := helloworld.NewHelloWorldClient("tcp4", "127.0.0.1:3002")
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	req, err := json.Marshal(data)
-	if err != nil {
-		panic(err)
-	}
-	buf := make([]byte, 4+len(req))
-	binary.BigEndian.PutUint32(buf[:4], uint32(len(req)))
-	copy(buf[4:], req)
-	_, err = conn.Write(buf)
-	if err != nil {
-		panic(err)
-	}
-}
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*1)
+	defer cancel()
+	rsp, err := cli.Greet(ctx, &helloworld.GreetReq{Name: "nobody", Echo: "lalala"})
+	log.Printf("err=%+v,rsp=%+v\n", err, rsp)
 
-func runServer() {
-	srv := rpc.NewServer()
-	srv.Register("fn", fn)
-	srv.Run()
-}
-
-func fn(args ...interface{}) {
-	fmt.Println(args...)
+	rsp, err = cli.Greet(ctx, &helloworld.GreetReq{Name: ""})
+	log.Printf("err=%+v,rsp=%+v\n", err, rsp)
 }

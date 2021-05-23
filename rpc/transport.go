@@ -15,8 +15,9 @@ type Transport struct {
 // NewTransport creates a transport
 func NewTransport(conn net.Conn) *Transport {
 	return &Transport{
-		conn:  conn,
-		codec: &JsonCodec{},
+		conn: conn,
+		// codec: &JsonCodec{},
+		codec: &GobCodec{},
 	}
 }
 
@@ -27,8 +28,8 @@ func (t *Transport) Send(req *RpcData) error {
 		return err
 	}
 	buf := make([]byte, 4+len(b))
-	binary.BigEndian.PutUint32(buf[:4], uint32(len(b))) 
-	copy(buf[4:], b)                                    
+	binary.BigEndian.PutUint32(buf[:4], uint32(len(b)))
+	copy(buf[4:], b)
 	_, err = t.conn.Write(buf)
 	return err
 }
@@ -40,12 +41,12 @@ func (t *Transport) Receive() (*RpcData, error) {
 	if err != nil {
 		return nil, err
 	}
-	dataLen := binary.BigEndian.Uint32(header) 
-	data := make([]byte, dataLen)              
+	dataLen := binary.BigEndian.Uint32(header)
+	data := make([]byte, dataLen)
 	_, err = io.ReadFull(t.conn, data)
 	if err != nil {
 		return nil, err
 	}
-	rsp, err := t.codec.Decode(data) 
+	rsp, err := t.codec.Decode(data)
 	return rsp, err
 }
